@@ -1,0 +1,13 @@
+Name:                hes
+Version:             0.1
+Description:         Haskell TCP driver for Greg Young's EventStore database
+License:             MIT
+Author:              Julien Letrouit
+Maintainer:          julien.letrouit@gmail.com
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+Executable hes
+  hs-source-dirs:    src/main
+  Main-is:           Main.hs
+  Build-Depends:     base >= 3 && < 5
+  ghc-options:       -Wall
