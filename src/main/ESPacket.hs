@@ -1,14 +1,19 @@
 {-# LANGUAGE PackageImports #-}
 module ESPacket (
   ESPacket(..), 
-  getESPacketM
+  getESPacket,
+  putESMessage
   ) where
 
 import qualified Data.ByteString.Lazy as L
-import Data.Binary.Get (Get, getWord32le, getLazyByteString, getWord8, remaining, lookAhead)
+import Data.Binary.Get (Get, getWord8, getWord32le, getLazyByteString, remaining, lookAhead)
+import Data.Binary.Put (Put, putWord8, putWord32le, putLazyByteString)
 import Data.Word
-import "uuid" Data.UUID (UUID, fromByteString)
+import Data.UUID (UUID, fromByteString, toByteString)
 import Data.Maybe (fromJust)
+import Text.ProtocolBuffers.WireMessage (messagePut, Wire)
+import Text.ProtocolBuffers.Reflections (ReflectDescriptor)
+import Control.Applicative
 
 data ESPacket = ESPacket { 
   msgType       :: Word8, 
@@ -16,34 +21,28 @@ data ESPacket = ESPacket {
   msg           :: L.ByteString }
   deriving (Show, Eq)
 
-getESPacketM :: Get (Maybe ESPacket)
-getESPacketM = do
-  remainingLength <- remaining
-  if remainingLength <= 4
-    then
-      return Nothing
-    else do
-      sz <- lookAhead getWord32le
-      if remainingLength < 4 + (fromIntegral sz)
-        then
-          return Nothing
-        else
-          getESPacket >>= return . Just
-
 getESPacket :: Get ESPacket
 getESPacket = do
-  sz  <- getMessageSize
-  tp  <- getWord8
-  cid <- getUUID
-  mg  <- getLazyByteString (fromIntegral sz)
-  return $ ESPacket { 
-    msgType = tp, 
-    correlationId = cid, 
-    msg = mg }
+  messageContentSize <- getMessageContentSize
+  ESPacket <$> getWord8 <*> getUUID <*> getLazyByteString (fromIntegral messageContentSize)
 
-getMessageSize :: Get Int
-getMessageSize = ((\i -> i - 17) . fromIntegral) `fmap` getWord32le
+getMessageContentSize :: Get Int
+getMessageContentSize = ((subtract 17) . fromIntegral) `fmap` getWord32le
 
 getUUID :: Get UUID
-getUUID = fmap (fromJust . fromByteString) (getLazyByteString 16)
+getUUID = (fromJust . fromByteString) `fmap` (getLazyByteString 16)
 
+putESMessage :: (ReflectDescriptor msg, Wire msg) => Word8 -> UUID -> msg -> Put
+putESMessage msgType msgCorrelationId msg = putESPacket packet
+  where 
+    msgContent = messagePut msg
+    packet     = ESPacket msgType msgCorrelationId msgContent
+
+putESPacket :: ESPacket -> Put
+putESPacket (ESPacket msgType msgCorrelationId msgContent) = do
+    putWord32le packetSize
+    putWord8 msgType
+    putLazyByteString (toByteString msgCorrelationId)
+    putLazyByteString msgContent
+  where 
+    packetSize = fromIntegral (17 + L.length msgContent) :: Word32

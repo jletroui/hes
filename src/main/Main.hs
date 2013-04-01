@@ -1,20 +1,17 @@
 import Network.Socket hiding (recv)
 import Network.Socket.ByteString.Lazy (sendAll, recv)
 import qualified Data.ByteString.Lazy as L
-import qualified Data.ByteString.Builder as BB
-import System.IO (Handle, IOMode(..), BufferMode(..), hSetBuffering, hClose)
+import qualified Data.ByteString as B
 import ESPacket
 import HES.Messages.CreateStream
 import qualified Commands as Cmd
-import Data.UUID (UUID, toByteString)
+import Data.UUID (toByteString)
 import qualified Data.UUID.V4 as U4
-import Data.Monoid (mappend)
-import Text.ProtocolBuffers.WireMessage (messagePut, Wire)
-import Text.ProtocolBuffers.Reflections (ReflectDescriptor)
 import Text.ProtocolBuffers.Header (uFromString)
-import Data.Word
-import Data.Monoid
-import Data.Binary.Get (runGetState)
+import Data.Binary.Get (runGetState, runGetIncremental, Decoder(..))
+import Data.Binary.Put (runPut)
+import Control.Monad (liftM)
+import Data.Conduit (Conduit, await, leftover, yield)
 
 main :: IO ()
 main = withSocketsDo $
@@ -26,14 +23,14 @@ main = withSocketsDo $
      --h <- socketToHandle sock ReadWriteMode
      --hSetBuffering h NoBuffering
 
-     (success, leftOver) <- createStreamCmd sock "firstStream"
+     (_, _) <- createStreamCmd sock "firstStream"
      --hClose h
      sClose sock
 
 createStreamCmd :: Socket -> String -> IO (Bool, L.ByteString)
 createStreamCmd s streamName = do
-  requestId <- uuidAsByteString
-  correlationId <- uuidAsBuilder
+  requestId <- nextUUIDAsLazyByteString
+  cmdCorrelationId <- U4.nextRandom
   let 
     cmd     = CreateStream {
       event_stream_id = uFromString streamName,
@@ -42,46 +39,38 @@ createStreamCmd s streamName = do
       allow_forwarding = True,
       is_json = True
     }
-    packet = buildPacket cmd Cmd.createStream correlationId
+    packet = runPut $ putESMessage Cmd.createStream cmdCorrelationId cmd
   putStrLn "Sending packet..."
   sendAll s packet
   putStrLn "Receiving response..."
-  --bytes <- recv s 1024
-  --putStrLn "Received response:"
-  --putStrLn $ display bytes
-  (response, leftOver) <- readNext s L.empty
+  (response, _) <- readNext s L.empty
   putStrLn $ show response
   return (True, L.empty)
 
-loopRead :: Handle -> IO ()
-loopRead h = do
-  bytes <- L.hGetNonBlocking h 1024
-  if (L.length bytes > 0) 
-    then (putStrLn (show bytes))
-    else (loopRead h)
-
-buildPacket :: (ReflectDescriptor msg, Wire msg) => msg -> Word8 -> BB.Builder -> L.ByteString
-buildPacket content cmdType correlationId = BB.toLazyByteString builder
+toESPacketConduit :: Conduit B.ByteString IO ESPacket
+toESPacketConduit = push $ runGetIncremental getESPacket 
   where
-    bytes       = messagePut content
-    contentSize = fromIntegral (17 + L.length bytes) :: Word32
-    builder     = (BB.word32LE contentSize) <> (BB.word8 Cmd.createStream) <> correlationId <> (BB.lazyByteString bytes)
+    push (Fail _ _ err) = 
+      error err
+    push (Partial cont) = do
+      nextChunk <- await
+      push $ cont nextChunk
+    push (Done leftOver _ packet) = do
+      yield packet
+      leftover leftOver
+      toESPacketConduit
 
-uuidAsBuilder :: IO BB.Builder
-uuidAsBuilder = fmap (BB.lazyByteString . toByteString) U4.nextRandom
-
-uuidAsByteString :: IO L.ByteString
-uuidAsByteString = BB.toLazyByteString `fmap` uuidAsBuilder
+nextUUIDAsLazyByteString :: IO L.ByteString
+nextUUIDAsLazyByteString = liftM toByteString U4.nextRandom
 
 readNext :: Socket -> L.ByteString -> IO (ESPacket, L.ByteString)
 readNext s leftOver = do      
   newBytes <- recv s 1024
   let allBytes = leftOver `L.append` newBytes
-  case runGetState getESPacketM allBytes 0 of
-    (Just pk, leftOver', _) -> return (pk, leftOver')
-    (Nothing, leftOver', _) -> readNext s leftOver'
+      (pk, leftOver', _) = runGetState getESPacket allBytes 0
+  return (pk, leftOver')
 
 display :: L.ByteString -> String
 display bs = case L.uncons bs of
-  Just (head, tail) -> (show head) ++ " " ++ (display tail)
+  Just (x, xs) -> (show x) ++ " " ++ (display xs)
   Nothing           -> ""
