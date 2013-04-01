@@ -14,6 +14,9 @@ Executable hes
                      network, 
                      uuid, 
                      conduit >= 1.0.3,
+                     resourcet,
+                     network-conduit,
+                     transformers,
                      protocol-buffers,
                      binary
   ghc-options:       -Wall
