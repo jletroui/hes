@@ -1,5 +1,5 @@
 {-# LANGUAGE PackageImports #-}
-module ESPacket (
+module HES.ESPacket (
   ESPacket(..), 
   getESPacket,
   putESMessage,
@@ -15,13 +15,13 @@ import Data.Maybe (fromJust)
 import Text.ProtocolBuffers.WireMessage (messagePut, Wire)
 import Text.ProtocolBuffers.Reflections (ReflectDescriptor)
 import Control.Applicative
-import Disp
+import HES.Disp
 import System.IO (nativeNewline, Newline(..))
 
 data ESPacket = ESPacket { 
   msgType          :: Word8, 
   msgCorrelationId :: UUID, 
-  msgBody       :: L.ByteString }
+  msgBody          :: L.ByteString }
   deriving (Show, Eq)
 
 getESPacket :: Get ESPacket

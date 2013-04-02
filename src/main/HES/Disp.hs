@@ -1,11 +1,11 @@
-module Disp where
+module HES.Disp where
 
 import Data.Word
 import Data.UUID (UUID)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString as B
 
--- | Human readable display of a
+-- | Human readable display of a, for debugging purpose
 class Disp a where
   disp :: a -> String
 
