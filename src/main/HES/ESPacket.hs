@@ -17,6 +17,7 @@ import Text.ProtocolBuffers.Reflections (ReflectDescriptor)
 import Control.Applicative
 import HES.Disp
 import System.IO (nativeNewline, Newline(..))
+import Control.DeepSeq (NFData, rnf)
 
 data ESPacket = ESPacket { 
   msgType          :: Word8, 
@@ -49,6 +50,12 @@ putESPacket (ESPacket typ correlationId body) = do
     putLazyByteString body
   where 
     packetSize = fromIntegral (17 + L.length body) :: Word32
+
+instance NFData ESPacket where
+  rnf (ESPacket t cid body) = rnf t `seq`
+                              cid `seq` -- Already strict
+                              rnf body `seq`
+                              ()
 
 instance Disp ESPacket where
   disp pk = "type: " ++ (disp $ msgType pk) ++ " cid: " ++ 

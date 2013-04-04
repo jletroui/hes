@@ -1,6 +1,6 @@
 Name:                hes
 Version:             0.1
-Description:         Haskell TCP driver for Greg Young's EventStore database
+Description:         Haskell TCP client for Greg Young's EventStore database
 License:             MIT
 Author:              Julien Letrouit
 Maintainer:          julien.letrouit@gmail.com
@@ -10,7 +10,8 @@ Executable hes
   hs-source-dirs:    src/main
   Main-is:           Main.hs
   Build-Depends:     base >= 3 && < 5,
-                     bytestring >= 0.10.2.0, 
+                     bytestring >= 0.10.2.0,
+                     containers, 
                      network, 
                      uuid, 
                      conduit >= 1.0.3,
@@ -18,5 +19,8 @@ Executable hes
                      network-conduit,
                      transformers,
                      protocol-buffers,
-                     binary
+                     binary,
+                     strict-concurrency,
+                     async,
+                     deepseq
   ghc-options:       -Wall
