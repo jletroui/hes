@@ -1,26 +1,63 @@
-Name:                hes
-Version:             0.1
-Description:         Haskell TCP client for Greg Young's EventStore database
-License:             MIT
-Author:              Julien Letrouit
-Maintainer:          julien.letrouit@gmail.com
-Build-Type:          Simple
-Cabal-Version:       >=1.2
-Executable hes
-  hs-source-dirs:    src/main
-  Main-is:           Main.hs
-  Build-Depends:     base >= 3 && < 5,
-                     bytestring >= 0.10.2.0,
-                     containers, 
-                     network, 
-                     uuid, 
-                     conduit >= 1.0.3,
-                     resourcet,
-                     network-conduit,
-                     transformers,
-                     protocol-buffers,
-                     binary,
-                     strict-concurrency,
-                     async,
-                     deepseq
-  ghc-options:       -Wall
+Name:              hes
+Version:           0.1
+Synopsis:          Haskell TCP client for Greg Young's EventStore database
+Description:       Haskell TCP client for Greg Young's EventStore database
+License:           BSD3
+License-file:      LICENSE
+Author:            Julien Letrouit
+Maintainer:        julien.letrouit@gmail.com
+Build-Type:        Simple
+Cabal-Version:     >=1.2
+Library
+  hs-source-dirs:  src
+  Exposed-modules: System.HES
+                   System.HES.Internal.Disp
+                   System.HES.Internal.ESPacket
+                   System.HES.Internal.Client
+                   Data.HES.Messages.CreateStream
+                   Data.HES.Messages.CreateStreamCompleted
+                   Data.HES.Messages.DeleteStream
+                   Data.HES.Messages.DeleteStreamCompleted
+                   Data.HES.Messages.DeniedToRoute
+                   Data.HES.Messages.EventRecord
+                   Data.HES.Messages.NewEvent
+                   Data.HES.Messages.OperationResult
+                   Data.HES.Messages.ReadAllEvents
+                   Data.HES.Messages.ReadAllEventsCompleted
+                   Data.HES.Messages.ReadEvent
+                   Data.HES.Messages.ReadEventCompleted
+                   Data.HES.Messages.ReadEventCompleted.ReadEventResult
+                   Data.HES.Messages.ReadStreamEvents
+                   Data.HES.Messages.ReadStreamEventsCompleted
+                   Data.HES.Messages.ReadStreamEventsCompleted.ReadStreamResult
+                   Data.HES.Messages.ResolvedEvent
+                   Data.HES.Messages.ResolvedIndexedEvent
+                   Data.HES.Messages.StreamEventAppeared
+                   Data.HES.Messages.SubscribeToStream
+                   Data.HES.Messages.SubscriptionConfirmation
+                   Data.HES.Messages.SubscriptionDropped
+                   Data.HES.Messages.TransactionCommit
+                   Data.HES.Messages.TransactionCommitCompleted
+                   Data.HES.Messages.TransactionStart
+                   Data.HES.Messages.TransactionStartCompleted
+                   Data.HES.Messages.TransactionWrite
+                   Data.HES.Messages.TransactionWriteCompleted
+                   Data.HES.Messages.UnsubscribeFromStream
+                   Data.HES.Messages.WriteEvents
+                   Data.HES.Messages.WriteEventsCompleted
+                   Data.HES.MessageCodes
+  Build-Depends:   base >= 3 && < 5,
+                   bytestring >= 0.10.2.0,
+                   containers, 
+                   network, 
+                   uuid, 
+                   conduit >= 1.0.3,
+                   resourcet,
+                   network-conduit,
+                   transformers,
+                   protocol-buffers,
+                   binary,
+                   strict-concurrency,
+                   async,
+                   deepseq
+  ghc-options:     -Wall
